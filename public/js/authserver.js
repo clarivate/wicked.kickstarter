@@ -142,6 +142,7 @@ Vue.component('auth-method', {
             <wicked-input v-model="value.config.clientSecret" label="ADFS client Secret:" hint="The ADFS client secret for the wicked API Portal (possibly not used)" :env-var="envPrefix + 'CLIENTSECRET'" />
             <wicked-input v-model="value.config.endpoints.authorizeEndpoint" label="Authorize endpoint of the ADFS server:" hint="The authorization endpoint of the upstream ADFS server" :env-var="envPrefix + 'AUTHORIZE_URL'" />
             <wicked-input v-model="value.config.endpoints.tokenEndpoint" label="Token endpoint of the ADFS server:" hint="The token endpoint of the upstream ADFS server" :env-var="envPrefix + 'TOKEN_URL'" />
+            <wicked-input v-model="value.config.resource" label="ADFS Resource URI:" :env-var="envPrefix + 'RESOURCE_URL'" />
             <hr>
             <wicked-input v-model="value.config.customIdField" label="JWT claim: Unique ID:" hint="REQUIRED: The JWT claim containing a unique ID from the remote IdP/OAuth2 server; e.g. <code>upn</code> or <code>sub</code>'" :env-var="envPrefix + 'FIELD_CUSTOMID'" />
             <wicked-input v-model="value.config.nameField" label="JWT Claim: Display name (full name):" hint="OPTIONAL: The JWT claim containing the full name/display name of the user (<code>name</code>)" :env-var="envPrefix + 'FIELD_NAME'" />
@@ -244,6 +245,18 @@ Vue.component('add-auth-method', {
     `
 });
 
+Vue.component('password-validation', {
+    props: ['value', 'strategies'],
+    template: `
+        <wicked-panel type="primary" :open=true :collapsible=false title="Password Validation Strategy">
+            <p>Please select the method with which the default authorization server and wicked's API validates password strength.</p>
+            <select v-model="value.passwordStrategy" class="form-control">
+                <option v-for="(strategy, index) in strategies" :value="strategy.strategy">{{ strategy.description }}</option>
+            </select>
+        </wicked-panel>
+    `
+});
+
 function createDefaultConfig(authMethodType, authMethodId) {
     switch (authMethodType) {
         case 'local':
@@ -286,6 +299,7 @@ function createDefaultConfig(authMethodType, authMethodId) {
                     authorizeEndpoint: 'https://your.idp.com/oauth2/authorize',
                     tokenEndpoint: 'https://your.idp.com/oauth2/token',
                 },
+                resource: "http://your.resource.uri",
                 params: {},
                 customIdField: 'sub',
                 firstNameField: 'given_name',
