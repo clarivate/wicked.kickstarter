@@ -55,7 +55,7 @@ Vue.component('wicked-api', {
                 <label :for="'plan_' + plan.id">{{ plan.name }} ({{ plan.id }})</label>
             </div>
         </div>
-        
+
         <hr>
 
         <div class="form-group">
@@ -87,18 +87,18 @@ Vue.component('wicked-api', {
                 <wicked-checkbox v-model="value.settings.mandatory_scope" label="<b>Mandatory Scope:</b> If specified, it is not possible to create access tokens without explicitly specifying a scope. Otherwise an access token with an empty scope may be created." />
                 <p>You can either specify a static list of scopes, or you can look the scopes up using a service (which you need to implement).
                    In case the scope lookup URL (below) is specified, the static list is <b>not</b> used. <b>Note:</b> This URL will be called with the API ID
-                   appended to it, e.g. <code>http://my-service:3000/scopes/&lt;api_id&gt;</code>. See 
+                   appended to it, e.g. <code>http://my-service:3000/scopes/&lt;api_id&gt;</code>. See
                    <a href="https://apim-haufe-io.github.io/wicked.node-sdk/interfaces/_interfaces_.scopelookupresponse.html" target="_blank">ScopeLookupResponse</a>.</p>
                 <wicked-input v-model="value.scopeLookupUrl" label="Scope lookup URL:" :env-var="envPrefix + 'SCOPE_LOOKUP_URL'" hint='URL as reachable from the portal API deployment, which by a GET can retrieve a list of scopes. TODO' />
 
                 <p>It is possible to delegate the scope decision from the end user to a third party instance; specify
                    the URL, as reachable from the Authorization Server instance inside your deployment, to the endpoint
-                   which accepts a POST with the desired scope and profile of the user.  See 
+                   which accepts a POST with the desired scope and profile of the user.  See
                    <a href="https://apim-haufe-io.github.io/wicked.node-sdk/interfaces/_interfaces_.passthroughscoperequest.html" target="_blank">PassthroughScopeRequest</a>
                    and <a href="https://apim-haufe-io.github.io/wicked.node-sdk/interfaces/_interfaces_.passthroughscoperesponse.html" target="_blank">PassthroughScopeResponse</a>
                    for a description of request and response formats.</p>
                 <wicked-input v-model="value.passthroughScopeUrl" label="Passthrough Scope URL:" :env-var="envPrefix + 'SCOPE_URL'" hint="URL as reachable from the wicked/auth server deployment."/>
- 
+
                 <table style="border-spacing: 5px; width: 100%">
                     <tr>
                         <th class="scopecell">Scope ID</th>
@@ -151,9 +151,14 @@ Vue.component('wicked-api-kong', {
     template: `
     <wicked-panel :open=true title="Kong (Gateway) Configuration" type="primary">
         <wicked-input v-model="value.api.upstream_url" label="Upstream (backend) URL:" hint="The URL under which the service can be found, <strong>as seen from the Kong container</strong>" :env-var="envPrefix + 'UPSTREAM_URL'" />
-        <wicked-string-array v-model="value.api.uris" :allow-empty=false label="Request URIs:" hint="This is the list of prefix you will use for this API on the API Gateway, e.g. <code>/petstore/v1</code>." />
-        <wicked-checkbox v-model="value.api.strip_uri" label="<b>Strip Uri</b>. Check this box if you don't want to pass the uri to the backend URL as well. Normally you wouldn't want that." />
-        <wicked-checkbox v-model="value.api.preserve_host" label="<b>Preserve Host</b>. Preserves the original <code>Host</code> header sent by the client, instead of replacing it with the hostname of the <code>upstream_url</code>." />
+
+        <wicked-panel title="Timeout Settings" type="default" :collapsible=true :open=false>
+          <wicked-input v-model="value.api.connect_timeout" number="true" label="Connect timeout:" hint="The timeout in milliseconds for establishing a connection to the upstream server. Defaults to <code>60000</code>" />
+          <wicked-input v-model="value.api.write_timeout" number="true" label="Write timeout:" hint="The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. Defaults to <code>60000</code>" />
+          <wicked-input v-model="value.api.read_timeout" number="true" label="Read timeout:" hint="The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. Defaults to <code>60000</code>" />
+        </wicked-panel>
+
+        <wicked-routes v-model="value.api.routes"/>
     </wicked-panel>
 `
 });
