@@ -203,6 +203,7 @@ router.post('/:apiId/api', function (req, res, next) {
        r.uris = r.uris ? r.uris.filter(u => !!u) : r.uris;
        r.protocols = r.protocols ? r.protocols.filter(u => !!u) : r.protocols;
        r.methods = r.methods ? r.methods.filter(u => !!u) : r.methods;
+       r.hosts = r.hosts ? r.hosts.filter(u => !!u) : r.hosts;
     });
 
     const kongConfig = {

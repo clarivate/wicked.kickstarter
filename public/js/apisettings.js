@@ -198,18 +198,65 @@ const vm = new Vue({
     data: injectedData
 });
 
+function isValidURL(uri) {
+  var res = uri.match(/^((((http|https|ws|wss):(?:\/\/)?)(?:[\-;:&=\+\$,\w]+@)?[A-Za-z0-9\.\-]+|(?:www\.|[\-;:&=\+\$,\w]+@)[A-Za-z0-9\.\-]+)((?:\/[\+~%\/\.\w\-_]*)?\??(?:[\-\+=&;%@\.\w_]*)#?(?:[\.\!\/\\\w]*))?)/g);
+  if (res == null)
+    return false;
+  else
+    return true;
+};
+
+
+function validateData(callback) {
+  let data = vm.$data;
+  let error = '';
+
+  //validate URI, most common errors we see
+  let token = data.config.api.upstream_url;
+  if (!isValidURL(token)) {
+     error = error + '\nInvalid Upstream (backend) URL: ' + token;
+  }
+
+  //validate Route(s)
+  for(let i = 0; i < data.config.api.routes.length; i += 1) {
+    const route = data.config.api.routes[i];
+    const methods = route.methods ? route.methods.filter( e => !!e ) : [];
+    const uris = route.uris ? route.uris.filter( e => !!e ) : [];
+    const hosts = route.hosts ? route.hosts.filter( e => !!e ) : [];
+
+    if ( !methods.length && !uris.length && !hosts.length ) {
+        error = error + '\nInvalid Route #' + (i + 1) + '. At least one of hosts, paths or methods must be set.';
+    }
+  }
+
+  if ( error ) {
+      return callback(null, error);
+  }
+  else {
+      return callback(JSON.stringify(data), null);
+  }
+};
+
 function storeData() {
     const apiId = vm.api.id;
-    $.post({
-        url: `/apis/${apiId}/api`,
-        data: JSON.stringify(vm.$data),
-        contentType: 'application/json'
-    }).fail(function () {
-        alert('Could not store data, an error occurred.');
-    }).done(function (data) {
-        if (data.message == 'OK')
-            alert('Successfully stored data.');
-        else
-            alert('The data was stored, but the backend returned the following message:\n\n' + data.message);
+
+    validateData( function(data, error) {
+        if( error ) {
+          alert('Error validating data:\n' + error);
+        }
+        else if( !error && data ) {
+            $.post({
+                url: `/apis/${apiId}/api`,
+                data: data,
+                contentType: 'application/json'
+            }).fail(function () {
+                alert('Could not store data, an error occurred.');
+            }).done(function (data) {
+                if (data.message == 'OK')
+                    alert('Successfully stored data.');
+                else
+                    alert('The data was stored, but the backend returned the following message:\n\n' + data.message);
+            });
+        }
     });
-}
+};
