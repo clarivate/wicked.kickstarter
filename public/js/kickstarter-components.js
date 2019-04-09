@@ -79,7 +79,8 @@ Vue.component('wicked-toggle-button', {
   props: ['width', 'name', 'toggled'],
   data: function () {
       return {
-          isToggled: this.toggled ? true : false
+          isToggled: this.toggled ? true : false,
+          internalId: randomId()
       }
   },
   computed: {
@@ -94,7 +95,7 @@ Vue.component('wicked-toggle-button', {
   },
   template: `
       <label :id="name" class="btn btn-default" :class="{active: isToggled}" :style="'width:' + buttonWidth">
-          <input v-on:click="reportToggle" type="checkbox" style="display: none;" :value="name" v-model="isToggled"><span v-html="name"></span></input>
+          <input v-on:click="reportToggle" type="checkbox" style="display: none;" :id="internalId" :value="name" v-model="isToggled"><span v-html="name"></span></input>
       </label>
   `
 });
@@ -107,7 +108,8 @@ Vue.component('wicked-toggle-array', {
             selection[this.value[i]] = true;
         }
         return {
-          checkedNames: selection
+          checkedNames: selection,
+          internalId: randomId()
         };
     },
     computed: {
@@ -118,7 +120,16 @@ Vue.component('wicked-toggle-array', {
     methods: {
       toggle: function(event) {
         if(event && event.tagName === 'INPUT') {
-          this.checkedNames[event.id] = !this.checkedNames[event.id];
+          this.checkedNames[event.value] = !this.checkedNames[event.value];
+
+          let result = [];
+          Object.keys(this.checkedNames).forEach( k => {
+            if ( this.checkedNames[k] ) {
+                result.push(k);
+            }
+          });
+
+          this.$emit('input', result);
         }
       },
       isToggled: function(key) {
@@ -130,7 +141,7 @@ Vue.component('wicked-toggle-array', {
             <label>{{label}}</label>
             <div class="panel panel-default">
                 <div class="panel-body">
-                    <wicked-toggle-button v-for="s in displayData" v-bind:key="s" :toggled="isToggled(s)" v-on:toggle="toggle" :name="s" :width="width"/>
+                    <wicked-toggle-button v-for="(s, index) in displayData" v-bind:key="s" :toggled="isToggled(s)" v-on:toggle="toggle" :id="internalId + '.' + index" :name="s" :width="width"/>
                     <div v-if="hint !== null">
                         <span class="wicked-note" v-html="hint"></span>
                     </div>
@@ -399,12 +410,37 @@ Vue.component('wicked-routes', {
     props: ['value', 'width'],
     data: function () {
         return {
+            internalId: randomId(),
+            values: this.value
         };
+    },
+    methods: {
+        addRoute: function (event) {
+            this.values.push({
+               strip_uri: true,
+               preserve_host: false,
+               plugins: [],
+               protocols: [],
+               methods: []
+            });
+
+            this.$emit('input', this.values);
+        },
+        deleteRoute: function (index) {
+            if (this.values.length <= 1) {
+                alert('You cannot delete the last route. There must be at least one value.');
+                return;
+            }
+            this.values.splice(index, 1);
+            this.$emit('input', this.values);
+        }
     },
     template: `
         <wicked-panel title="API Routes" type="default" :collapsible=false :open=true>
-            <div v-for="route in value">
+            <div v-for="(route, index) in values">
                 <div class="panel panel-default">
+                    <button v-if="index > 0" v-on:click="deleteRoute(index)" :id="internalId + '.' + index" class="btn btn-danger pull-right" type="button"><span class="glyphicon glyphicon-remove"></span></button>
+
                     <div class="panel-body">
                         <wicked-string-array v-model="route.uris" :allow-empty=false label="Paths:" hint="A list of paths that match this Route. For example: <code>/my-path</code>. At least one of <code>hosts</code>, <code>paths</code> or <code>methods</code> must be set." />
                         <wicked-checkbox v-model="route.strip_uri" label="<b>Strip Uri</b>. Check this box if you don't want to pass the uri to the backend URL as well. Normally you wouldn't want that." />
@@ -418,7 +454,7 @@ Vue.component('wicked-routes', {
                     </div>
                 </div>
             </div>
-        <button v-on:click="addString" class="btn btn-success" type="button"><span class="glyphicon glyphicon-plus"></span></button>
+        <button v-on:click="addRoute" class="btn btn-success" type="button"><span class="glyphicon glyphicon-plus"></span></button>
         </wicked-panel>
 
     `

@@ -197,7 +197,13 @@ router.post('/:apiId/api', function (req, res, next) {
 
     const plugins = pluginUtils.makePluginsArray(body.plugins);
     const config = body.config;
-    config.api.uris = config.api.uris.filter(u => !!u);
+    //config.api.uris = config.api.uris.filter(u => !!u);
+
+    config.api.routes.forEach( r => {
+       r.uris = r.uris ? r.uris.filter(u => !!u) : r.uris;
+       r.protocols = r.protocols ? r.protocols.filter(u => !!u) : r.protocols;
+       r.methods = r.methods ? r.methods.filter(u => !!u) : r.methods;
+    });
 
     const kongConfig = {
         api: config.api,
