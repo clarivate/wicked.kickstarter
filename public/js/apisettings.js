@@ -153,7 +153,6 @@ Vue.component('wicked-api-kong', {
         <wicked-input v-model="value.api.upstream_url" label="Upstream (backend) URL:" hint="The URL under which the service can be found, <strong>as seen from the Kong container</strong>" :env-var="envPrefix + 'UPSTREAM_URL'" />
 
         <wicked-panel title="Timeout Settings" type="default" :collapsible=true :open=false>
-        retries
           <wicked-input v-model="value.api.retries" number="true" label="Retries:" hint="The number of retries to execute upon failure to proxy. Defaults to <code>5</code>." />
           <wicked-input v-model="value.api.upstream_connect_timeout" number="true" label="Connect timeout:" hint="The timeout in milliseconds for establishing a connection to the upstream server. Defaults to <code>60000</code>" />
           <wicked-input v-model="value.api.upstream_write_timeout" number="true" label="Write timeout:" hint="The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. Defaults to <code>60000</code>" />
@@ -208,6 +207,9 @@ function isValidURL(uri) {
     return true;
 };
 
+function isNumeric(value) {
+    return /^\d+$/.test(value);
+}
 
 function validateData(callback) {
   let data = vm.$data;
@@ -221,22 +223,22 @@ function validateData(callback) {
 
   //validate Service
   token = data.config.api.retries;
-  if( token && !Number.isInteger(token) ) {
+  if( token && !isNumeric(token) ) {
      error = error + '\nInvalid Retries: ' + token + ', must empty for default or Integer';
   }
 
   token = data.config.api.upstream_connect_timeout;
-  if( token && !Number.isInteger(token) ) {
+  if( token && !isNumeric(token) ) {
      error = error + '\nInvalid Connect timeout: ' + token + ', must empty for default or Integer';
   }
 
   token = data.config.api.upstream_write_timeout;
-  if( token && !Number.isInteger(token) ) {
+  if( token && !isNumeric(token) ) {
      error = error + '\nInvalid Write timeout: ' + token + ', must empty for default or Integer';
   }
 
   token = data.config.api.upstream_read_timeout;
-  if( token && !Number.isInteger(token) ) {
+  if( token && !isNumeric(token) ) {
      error = error + '\nInvalid Read timeout: ' + token + ', must empty for default or Integer';
   }
 
@@ -244,10 +246,10 @@ function validateData(callback) {
   for(let i = 0; i < data.config.api.routes.length; i += 1) {
     const route = data.config.api.routes[i];
     const methods = route.methods ? route.methods.filter( e => !!e ) : [];
-    const uris = route.uris ? route.uris.filter( e => !!e ) : [];
+    const paths = route.paths ? route.paths.filter( e => !!e ) : [];
     const hosts = route.hosts ? route.hosts.filter( e => !!e ) : [];
 
-    if ( !methods.length && !uris.length && !hosts.length ) {
+    if ( !methods.length && !paths.length && !hosts.length ) {
         error = error + '\nInvalid Route #' + (i + 1) + '. At least one of hosts, paths or methods must be set.';
     }
   }

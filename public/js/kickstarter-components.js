@@ -227,7 +227,7 @@ Vue.component('wicked-input', {
             isTextarea: isTextarea,
             textareaHeight: textareaHeight,
             isJson: isJson,
-            isValidJson: true,
+            isValidInput: true,
             envVarName: envVarName
         };
     },
@@ -282,9 +282,17 @@ Vue.component('wicked-input', {
             if (this.isJson) {
                 try {
                     JSON.parse(value);
-                    this.isValidJson = true;
+                    this.isValidInput = true;
                 } catch (err) {
-                    this.isValidJson = false;
+                    this.isValidInput = false;
+                }
+            }
+            else if(this.isNumber) {
+                this.isValidInput = !isNaN(value);
+
+                //submit number type
+                if(this.isValidInput) {
+                    value = Number(value);
                 }
             }
             this.$emit('input', value);
@@ -298,7 +306,8 @@ Vue.component('wicked-input', {
                     type="text"
                     :readonly=readonly
                     v-bind:value="value"
-                    v-on:input="$emit('input', $event.target.value)">
+                    v-on:input="verifyValue($event.target.value)">
+                <p v-if="isNumber && !isValidInput"><span style="color:red; font-weight:bold;">ERROR:</span> Content is not valid Number.</p>
                 <span class="input-group-btn">
                     <div v-if="showEnvVar" class="dropdown">
                         <button class="btn btn-warning dropdown-toggle" type="button" :id="internalId + '_dd'" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
@@ -324,7 +333,7 @@ Vue.component('wicked-input', {
                           :style="'height:' + textareaHeight"
                           v-on:input="verifyValue($event.target.value)"
                 >{{ value }}</textarea>
-                <p v-if="isJson && !isValidJson"><span style="color:red; font-weight:bold;">ERROR:</span> Content is not valid JSON.</p>
+                <p v-if="isJson && !isValidInput"><span style="color:red; font-weight:bold;">ERROR:</span> Content is not valid JSON.</p>
                 <div v-if="!isJson">
                     <p></p>
                     <button v-if="showEnvVar" class="btn btn-warning" v-on:click="makeVar">Make ENV var</button>
@@ -417,7 +426,7 @@ Vue.component('wicked-routes', {
     methods: {
         addRoute: function (event) {
             this.values.push({
-               strip_uri: true,
+               strip_path: true,
                preserve_host: false,
                plugins: [],
                protocols: [],
@@ -442,8 +451,8 @@ Vue.component('wicked-routes', {
                     <button v-if="index > 0" v-on:click="deleteRoute(index)" :id="internalId + '.' + index" class="btn btn-danger pull-right" type="button"><span class="glyphicon glyphicon-remove"></span></button>
 
                     <div class="panel-body">
-                        <wicked-string-array v-model="route.uris" :allow-empty=false label="Paths:" hint="A list of paths that match this Route. For example: <code>/my-path</code>. At least one of <code>hosts</code>, <code>paths</code> or <code>methods</code> must be set." />
-                        <wicked-checkbox v-model="route.strip_uri" label="<b>Strip Uri</b>. Check this box if you don't want to pass the uri to the backend URL as well. Normally you wouldn't want that." />
+                        <wicked-string-array v-model="route.paths" :allow-empty=false label="Paths:" hint="A list of paths that match this Route. For example: <code>/my-path</code>. At least one of <code>hosts</code>, <code>paths</code> or <code>methods</code> must be set." />
+                        <wicked-checkbox v-model="route.strip_path" label="<b>Strip Uri</b>. Check this box if you don't want to pass the uri to the backend URL as well. Normally you wouldn't want that." />
                         <wicked-checkbox v-model="route.preserve_host" label="<b>Preserve Host</b>. Preserves the original <code>Host</code> header sent by the client, instead of replacing it with the hostname of the <code>upstream_url</code>." />
                         <wicked-panel title="Advanced Settings" type="default" :collapsible=true :open=false>
                           <wicked-string-array v-model="route.hosts" :allow-empty=true label="Hosts:" hint="A list of domain names that match this Route. For example: <code>example.com</code>. By default it will use <code>APIHOST</code>. At least one of <code>hosts</code>, <code>paths</code> or <code>methods</code> must be set." />
