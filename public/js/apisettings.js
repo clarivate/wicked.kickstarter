@@ -154,9 +154,9 @@ Vue.component('wicked-api-kong', {
 
         <wicked-panel title="Timeout Settings" type="default" :collapsible=true :open=false>
           <wicked-input v-model="value.api.retries" number="true" label="Retries:" hint="The number of retries to execute upon failure to proxy. Defaults to <code>5</code>." />
-          <wicked-input v-model="value.api.upstream_connect_timeout" number="true" label="Connect timeout:" hint="The timeout in milliseconds for establishing a connection to the upstream server. Defaults to <code>60000</code>" />
-          <wicked-input v-model="value.api.upstream_write_timeout" number="true" label="Write timeout:" hint="The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. Defaults to <code>60000</code>" />
-          <wicked-input v-model="value.api.upstream_read_timeout" number="true" label="Read timeout:" hint="The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. Defaults to <code>60000</code>" />
+          <wicked-input v-model="value.api.connect_timeout" number="true" label="Connect timeout:" hint="The timeout in milliseconds for establishing a connection to the upstream server. Defaults to <code>60000</code>" />
+          <wicked-input v-model="value.api.write_timeout" number="true" label="Write timeout:" hint="The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. Defaults to <code>60000</code>" />
+          <wicked-input v-model="value.api.read_timeout" number="true" label="Read timeout:" hint="The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. Defaults to <code>60000</code>" />
         </wicked-panel>
 
         <wicked-routes v-model="value.api.routes"/>
@@ -227,19 +227,34 @@ function validateData(callback) {
      error = error + '\nInvalid Retries: ' + token + ', must empty for default or Integer';
   }
 
-  token = data.config.api.upstream_connect_timeout;
+  token = data.config.api.connect_timeout;
   if( token && !isNumeric(token) ) {
      error = error + '\nInvalid Connect timeout: ' + token + ', must empty for default or Integer';
   }
 
-  token = data.config.api.upstream_write_timeout;
+  token = data.config.api.write_timeout;
   if( token && !isNumeric(token) ) {
      error = error + '\nInvalid Write timeout: ' + token + ', must empty for default or Integer';
   }
 
-  token = data.config.api.upstream_read_timeout;
+  token = data.config.api.read_timeout;
   if( token && !isNumeric(token) ) {
      error = error + '\nInvalid Read timeout: ' + token + ', must empty for default or Integer';
+  }
+
+  //normalize Route(s) tokens
+  for(let i = 0; i < data.config.api.routes.length; i += 1) {
+    const route = data.config.api.routes[i];
+
+    //method aka Verb is UPPERCASED
+    if ( route.methods ) {
+        route.methods = route.methods.map( e => e.toUpperCase() );
+    }
+
+    //protocol aka Schema is lowercased
+    if ( route.protocols ) {
+        route.protocols = route.protocols.map( e => e.toLowerCase() );
+    }
   }
 
   //validate Route(s)

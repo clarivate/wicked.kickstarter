@@ -428,7 +428,8 @@ Vue.component('wicked-routes', {
             this.values.push({
                strip_path: true,
                preserve_host: false,
-               plugins: [],
+               // TODO: removing for now, need to rethink the whole concept
+               // plugins: [],
                protocols: [],
                methods: []
             });
@@ -458,7 +459,7 @@ Vue.component('wicked-routes', {
                           <wicked-string-array v-model="route.hosts" :allow-empty=true label="Hosts:" hint="A list of domain names that match this Route. For example: <code>example.com</code>. By default it will use <code>APIHOST</code>. At least one of <code>hosts</code>, <code>paths</code> or <code>methods</code> must be set." />
                           <wicked-toggle-array v-model="route.protocols" options="HTTP,HTTPS" width="6em" label="Protocols:" hint="A list of the protocols this Route should allow. By default it is <code>HTTP, HTTPS</code> which means that the Route accepts both."/>
                           <wicked-toggle-array v-model="route.methods" options="GET,HEAD,POST,PUT,PATCH,DELETE" width="6em" label="Methods:" hint="A list of HTTP methods that match this Route. By default it is all. At least one of <code>hosts</code>, <code>paths</code> or <code>methods</code> must be set."/>
-                          <wicked-input v-model="route.plugins" :textarea=true :json=true label="Plugin configuration for this Route:" height="30em" hint="Plugin configuration that will be applied for this Route"/>
+                          <!-- <wicked-input v-model="route.plugins" :textarea=true :json=true label="Plugin configuration for this Route:" height="30em" hint="Plugin configuration that will be applied for this Route"/> -->
                         </wicked-panel>
                     </div>
                 </div>
