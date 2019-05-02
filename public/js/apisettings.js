@@ -47,6 +47,18 @@ Vue.component('wicked-api', {
         <wicked-string-array :allow-empty=true v-model="value.tags" label="Tags:" />
 
         <div class="form-group">
+            <label>Authorization Mode:</label>
+            <select v-model="value.auth" class="form-control">
+                <option value="key-auth">Authorize with simple API Keys (key-auth)</option>
+                <option value="oauth2">Authorize using OAuth 2.0 (oauth2)</option>
+                <option value="none">Public API/Authorization not required (none)</option>
+            </select>
+            <wicked-checkbox v-if="value.auth !== 'none'" v-model="value.hide_credentials" label="<b>Hide Credentials</b> from upstream server"/>
+        </div>
+
+        <div v-if="value.auth != 'none'" class="form-group">
+            <hr>
+
             <label>Associated Plans:</label>
             <p>Each API has to be associated with at least one plan in order to enable subscriptions to the API. Select
                which plans shall be associated with this API.</p>
@@ -56,16 +68,6 @@ Vue.component('wicked-api', {
             </div>
         </div>
 
-        <hr>
-
-        <div class="form-group">
-            <label>Authorization Mode:</label>
-            <select v-model="value.auth" class="form-control">
-                <option value="key-auth">Authorize with simple API Keys (key-auth)</option>
-                <option value="oauth2">Authorize using OAuth 2.0 (oauth2)</option>
-            </select>
-            <wicked-checkbox v-model="value.hide_credentials" label="<b>Hide Credentials</b> from upstream server"/>
-        </div>
         <wicked-panel v-if="value.auth == 'oauth2'" :open=true type="info" title="OAuth 2.0 Settings">
             <div class="form-group">
                 <label><a href="/pools" target="_blank">Registration Pool</a>:</label>
@@ -150,6 +152,7 @@ Vue.component('wicked-api-kong', {
     props: ['value', 'envPrefix'],
     template: `
     <wicked-panel :open=true title="Kong (Gateway) Configuration" type="primary">
+        <wicked-input v-model="value.api.host" label="API Host:" hint="API Host, it could be alternate DNS for the service" :env-var="envPrefix + 'HOST'" />
         <wicked-input v-model="value.api.upstream_url" label="Upstream (backend) URL:" hint="The URL under which the service can be found, <strong>as seen from the Kong container</strong>" :env-var="envPrefix + 'UPSTREAM_URL'" />
 
         <wicked-panel title="Timeout Settings" type="default" :collapsible=true :open=false>
