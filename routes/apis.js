@@ -57,6 +57,9 @@ router.post('/', function (req, res, next) {
         let apiIndex = Number(body.__object);
 
         let apis = utils.loadApis(req.app);
+
+        console.log('APIS FFFFF: ' + JSON.stringify(apis));
+
         let apiId = apis.apis[apiIndex].id;
         apis.apis.splice(apiIndex, 1);
         utils.saveApis(req.app, apis);
@@ -65,47 +68,50 @@ router.post('/', function (req, res, next) {
         return res.redirect(redirect);
     }
 
-    for (let i = 0; i < body.apis.length; ++i) {
-        let thisApi = body.apis[i];
-        let tags = thisApi.tags.split(',');
-        if (thisApi.tags !== '')
-            thisApi.tags = tags;
-        else
-            thisApi.tags = [];
+    if (body.apis) {
+      for (let i = 0; i < body.apis.length; ++i) {
+          let thisApi = body.apis[i];
+          let tags = thisApi.tags.split(',');
+          if (thisApi.tags !== '')
+              thisApi.tags = tags;
+          else
+              thisApi.tags = [];
 
-        let plans = [];
-        for (let planName in thisApi.plans)
-            plans.push(planName);
-        thisApi.plans = plans;
+          let plans = [];
+          for (let planName in thisApi.plans)
+              plans.push(planName);
+          thisApi.plans = plans;
 
-        const authServers = [];
-        debug(thisApi);
-        for (let authServerName in thisApi.authServers) {
-            debug('authServerName: ' + authServerName);
-            const realName = authServerSafeNames[authServerName];
-            if (thisApi.authServers[authServerName] && realName)
-                authServers.push(realName);
-        }
-        debug(authServers);
-        if (authServers.length > 0)
-            thisApi.authServers = authServers;
-        else if (thisApi.authServers)
-            delete thisApi.authServers;
+          const authServers = [];
+          debug(thisApi);
+          for (let authServerName in thisApi.authServers) {
+              debug('authServerName: ' + authServerName);
+              const realName = authServerSafeNames[authServerName];
+              if (thisApi.authServers[authServerName] && realName)
+                  authServers.push(realName);
+          }
+          debug(authServers);
+          if (authServers.length > 0)
+              thisApi.authServers = authServers;
+          else if (thisApi.authServers)
+              delete thisApi.authServers;
+      }
+
+      let apis = utils.loadApis(req.app);
+
+      apis.apis = body.apis;
+      for (let i = 0; i < apis.apis.length; ++i) {
+          if (apis.apis[i].requiredGroup == '<none>')
+              delete apis.apis[i].requiredGroup;
+      }
+
+      utils.saveApis(req.app, apis);
+
+      // Write changes to Kickstarter.json
+      const kickstarter = utils.loadKickstarter(req.app);
+      kickstarter.apis = 3;
+      utils.saveKickstarter(req.app, kickstarter);
     }
-
-    let apis = utils.loadApis(req.app);
-    apis.apis = body.apis;
-    for (let i = 0; i < apis.apis.length; ++i) {
-        if (apis.apis[i].requiredGroup == '<none>')
-            delete apis.apis[i].requiredGroup;
-    }
-
-    utils.saveApis(req.app, apis);
-
-    // Write changes to Kickstarter.json
-    const kickstarter = utils.loadKickstarter(req.app);
-    kickstarter.apis = 3;
-    utils.saveKickstarter(req.app, kickstarter);
 
     res.redirect(redirect);
 });
