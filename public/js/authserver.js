@@ -118,7 +118,10 @@ Vue.component('auth-method', {
         <div v-else-if="value.type == 'external'">
             <wicked-input v-model="value.config.validateUserPassUrl" label="URL to validate username/password:" :env-var="envPrefix + 'USERPASSURL'" hint="The auth server will POST to this URL to validate username and password, and expects a well-formed response. See <a href='https://apim-haufe-io.github.io/wicked.node-sdk/interfaces/_interfaces_.externaluserpassrequest.html' target='_blank'>ExternalUserPassRequest</a> and <a href='https://apim-haufe-io.github.io/wicked.node-sdk/interfaces/_interfaces_.externaluserpassresponse.html' target='_blank'>ExternalUserPassResponse</a>." />
             <wicked-input v-model="value.config.allowRefreshUrl" label="URL for refreshing tokens:" :env-var="envPrefix + 'REFRESHURL'" hint="The auth server will POST to this URL to check whether it is allowed to refresh a token, and expects a well-formed response. See <a href='https://apim-haufe-io.github.io/wicked.node-sdk/interfaces/_interfaces_.externalrefreshrequest.html' target='_blank'>ExternalRefreshRequest</a> and <a href='https://apim-haufe-io.github.io/wicked.node-sdk/interfaces/_interfaces_.externalrefreshresponse.html' target='_blank'>ExternalRefreshResponse</a>." />
+            <p>Login UI Tweaks</p>
             <wicked-input v-model="value.config.forgotPasswordUrl" label="URL for resetting password:" :env-var="envPrefix + 'FORGOTPASSWORD'" hint="In case the external source has a web page which can be used to retrieve or reset passwords, you can specify it here, and it will be displayed as a 'Forgot password?' link on the login page." />
+            <wicked-input v-model="value.config.usernamePrompt" label="Login prompt for username or email (leave empty for <code>Email</code>):" :env-var="envPrefix + 'USERPROMPT'" />
+            <wicked-input v-model="value.config.passwordPrompt" label="Password prompt (leave empty for <code>Password</code>):" :env-var="envPrefix + 'PASSWORDPROMPT'" />
         </div>
         <div v-else-if="value.type == 'google'">
             <wicked-input v-model="value.config.clientId" label="Google client ID:" hint="The Google client ID for the wicked API Portal" :env-var="envPrefix + 'CLIENTID'"/>
@@ -207,6 +210,22 @@ Vue.component('auth-method', {
                 <a href="https://www.npmjs.com/package/saml2-js#ServiceProvider" target="_blank">Service Provider options</a>, 
                 <a href="https://www.npmjs.com/package/saml2-js#IdentityProvider" target="_blank">Identity Provider options</a>.</p>
         </div>
+        <div v-else-if="value.type == 'ldap'">
+            <wicked-checkbox v-model="value.config.trustUsers" label="Trust user email addresses from this source (maps to <code>email_verified</code>)" />
+            <wicked-input v-model="value.config.url" label="Fully qualified URL to your LDAP server, as reachable from wicked:" :env-var="envPrefix + 'URL'" />
+            <wicked-input v-model="value.config.ldapUser" label="LDAP User allowed to bind and perform a search:" :env-var="envPrefix + 'USER'" />
+            <wicked-input v-model="value.config.ldapPassword" label="LDAP Password for above user:" :env-var="envPrefix + 'PASSWORD'" />
+            <wicked-input v-model="value.config.base" label="Base search DN:" :env-var="envPrefix + 'BASEDN'" />
+            <wicked-input v-model="value.config.filter" label="Filter string; must contain <code>%username%</code>:" :env-var="envPrefix + 'FILTER'" />
+            <p class="wicked-note">The filter string must map the entered username to a single LDAP entry. Typical filter strings are (for a Microsoft AD): <code>(&(objectClass=organizationalPerson)(sAMAccountName=%username%))</code> (allows login per plain username), or <code>(&(objectClass=organizationalPerson)(mail=%username%))</code> (log in by email address)</p>
+            <wicked-input v-model="value.config.profile" textarea=true json=true label="Profile mapping (from attribute values):" height="200px" :env-var="envPrefix + 'PROFILE_MAP'" />
+            <p class="wicked-note">Required claims are <code>sub</code> and <code>email</code>; recommended is also <code>name</code>. Only direct attributes are supported, templating is currently not supported.</p>
+            <hr>
+            <p>Login UI Tweaks</p>
+            <wicked-input v-model="value.config.usernamePrompt" label="Login prompt for username or email (leave empty for <code>Email</code>):" :env-var="envPrefix + 'USERPROMPT'" />
+            <wicked-input v-model="value.config.passwordPrompt" label="Password prompt (leave empty for <code>Password</code>):" :env-var="envPrefix + 'PASSWORDPROMPT'" />
+            <wicked-input v-model="value.config.forgotPasswordUrl" label="URL for resetting password:" :env-var="envPrefix + 'FORGOTPASSWORD'" hint="In case the LDAP server has a web page which can be used to retrieve or reset passwords, you can specify it here, and it will be displayed as a 'Forgot password?' link on the login page." />
+        </div>
         <div v-else>
             <p><i>Unknown auth method type. To change this, please edit the JSON file directly.</i></p>
         </div>
@@ -265,6 +284,7 @@ Vue.component('add-auth-method', {
                     <option>oauth2</option>
                     <option>adfs</option>
                     <option>saml</option>
+                    <option>ldap</option>
                 </select>
                 <p></p>
                 <input v-if="!!selectedType" v-model="authMethodId" class="form-control" placeholder="Enter an auth method id (a-z, 0-9, _, -)">
@@ -379,6 +399,24 @@ function createDefaultConfig(authMethodType, authMethodId) {
                     ],
                     "sign_get_request": false,
                     "allow_unencrypted_assertion": true
+                }, null, 2)
+            };
+            break;
+        }
+        case 'ldap': {
+            const envVarPrefix = '$PORTAL_AUTH_LDAP_' + authMethodId.toUpperCase().replace(/-/g, '_') + '_';
+            defaultConfig = {
+                trustUsers: true,
+                url: 'ldaps://ldap.company.com:636',
+                ldapUser: '',
+                ldapPassword: '',
+                base: 'DC=domain,DC=company,DC=com',
+                filter: '(&(objectClass=organizationalPerson)(sAMAccountName=%username%))',
+                usernamePrompt: 'Username',
+                profile: JSON.stringify({
+                    sub: 'sAMAccountName',
+                    email: 'mail',
+                    name: 'displayName'
                 }, null, 2)
             };
             break;
