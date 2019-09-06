@@ -6,13 +6,22 @@ const { debug, info, warn, error } = require('portal-env').Logger('kickstarter:c
 
 const utils = require('./utils');
 
+const chatbotTypes = [
+    "slack",
+    "msteams",
+];
+
 router.get('/', function (req, res, next) {
     const glob = utils.loadGlobals(req.app);
     const envVars = utils.loadEnvDict(req.app);
     utils.mixinEnv(glob, envVars);
 
-    if (!glob.chatbot.hookUrls) {
-        glob.chatbot.hookUrls = [];
+    if (!glob.chatbot.types) {
+        glob.chatbot.types = chatbotTypes;
+    }
+
+    if (!glob.chatbot.targets) {
+        glob.chatbot.targets = [];
     }
 
     res.render('chatbot',
@@ -32,19 +41,35 @@ router.post('/', function (req, res, next) {
     glob.chatbot = body.glob.chatbot;
     utils.mixoutEnv(glob, envVars);
 
-    if ("deleteHook" == body.__action) {
-        const index = Number(body.__object);
-        glob.chatbot.hookUrls.splice(index, 1);
-    } else if ("addHook" == body.__action) {
-        if (!glob.chatbot.hookUrls) {
-            glob.chatbot.hookUrls = [];
-        }
-        glob.chatbot.hookUrls.push('https://url.to.your.slack/hookidentifierwhichisasecrect');
+    if (!glob.chatbot.types) {
+        glob.chatbot.types = chatbotTypes;
     }
 
+    if ("deleteTarget" === body.__action) {
+        const index = Number(body.__object);
+        glob.chatbot.targets.splice(index, 1);
+    } else if ("addTarget" === body.__action) {
+        if (!glob.chatbot.targets) {
+            glob.chatbot.targets = [];
+        }
+        glob.chatbot.targets.push({
+            "type": chatbotTypes[0],
+            "hookUrl": "https://your.messaging.service/hookUrlFromYourAdministrator",
+            "events": {
+                "userSignedUp": true,
+                "userValidatedEmail": true,
+                "applicationAdded": true,
+                "applicationDeleted": true,
+                "subscriptionAdded": true,
+                "subscriptionDeleted": true,
+                "approvalRequired": true,
+                "lostPasswordRequest": true,
+                "verifyEmailRequest": true
+            }
+        });
+    }
     utils.saveGlobals(req.app, glob);
     utils.saveEnvDict(req.app, envVars, "default");
-
     // Write changes to Kickstarter.json
     const kickstarter = utils.loadKickstarter(req.app);
     kickstarter.chatbot = 3;
