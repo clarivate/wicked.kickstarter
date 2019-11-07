@@ -39,8 +39,8 @@ block content
                             .panel.panel-default
                                 .panel-body
 
-                                    label Messenger type:
-                                        select(name=thisTarget + '.type')
+                                    label Messenger type
+                                        select(name=thisTarget + '.type').form-control
                                             each item in glob.chatbot.types
                                                 option(value=item selected=glob.chatbot.targets[i].type === item) #{item}
                                     +inputField(thisTarget + '.hookUrl', glob, 'Hook URL', 'See documentation of you messaging tool on how to get one of these.')
