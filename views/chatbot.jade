@@ -13,7 +13,7 @@ block content
         .container
             h1 Chatbot configuration
             
-            p wicked may integrate with both Slack and Rocket.Chat. Specify hook URLs and other configuration options.
+            p wicked may integrate with both Slack, Rocket.Chat and MS Teams. Specify hook URLs and other configuration options.
     
     .container
         form(role='form' method='post' action='/chatbot')
@@ -30,30 +30,40 @@ block content
                         table(width='100%')
                             tr
                                 td
-                                    h4.panel-title Hook URLs
+                                    h4.panel-title Targets
                                 td(style='text-align:right')
-                                    button(type='submit' onclick='setAction("addHook");').btn.btn-sm.btn-success Add Hook URL
+                                    button(type='submit' onclick='setAction("addTarget");').btn.btn-sm.btn-success Add target
                     .panel-body
-                        each hookUrl, i in glob.chatbot.hookUrls
-                            - var thisHookName = 'glob.chatbot.hookUrls['+i+']'
-                            +inputField(thisHookName, glob, 'Hook URL', 'See documentation of Slack or Rocket.Chat how to get one of these.')
-                            p 
-                                button(type='submit' onclick='setAction("deleteHook", #{i});').btn.btn-sm.btn-danger Delete Hook URL
-                
-                br
-                // The possible events
-                .panel.panel-default
-                    .panel-heading
-                        h4.panel-title Send out a message
-                    .panel-body
-                        +checkBox('glob.chatbot.events.userSignedUp', glob, 'When a new user signs up to your portal')
-                        +checkBox('glob.chatbot.events.userValidatedEmail', glob, 'When a user successfully validated his email address')
-                        +checkBox('glob.chatbot.events.applicationAdded', glob, 'When an application has been created')
-                        +checkBox('glob.chatbot.events.applicationDeleted', glob, 'When an application has been deleted')
-                        +checkBox('glob.chatbot.events.subscriptionAdded', glob, 'When a new subscription to an API has been created')
-                        +checkBox('glob.chatbot.events.subscriptionDeleted', glob, 'When a subscription has been cancelled')
-                        +checkBox('glob.chatbot.events.approvalRequired', glob, 'When new subscription approval requests have been filed')
-                        +checkBox('glob.chatbot.events.lostPasswordRequest', glob, 'When a user requests to reset his or her password')
-                        +checkBox('glob.chatbot.events.verifyEmailRequest', glob, 'When a user wants to validate his or her email address')
-            
+                        each targets, i in glob.chatbot.targets
+                            - var thisTarget = 'glob.chatbot.targets['+i+']'
+                            .panel.panel-default
+                                .panel-body
+
+                                    label Messenger type
+                                        select(name=thisTarget + '.type').form-control
+                                            each item in glob.chatbot.types
+                                                option(value=item selected=glob.chatbot.targets[i].type === item) #{item}
+                                    +inputField(thisTarget + '.hookUrl', glob, 'Hook URL', 'See documentation of you messaging tool on how to get one of these.')
+                                    p
+                                        button(type='submit' onclick='setAction("deleteTarget", #{i});').btn.btn-sm.btn-danger Delete this target
+
+                                    br
+                                    // The possible events
+                                    .panel.panel-default
+                                        .panel-heading
+                                            h4.panel-title Configure notifications
+                                        .panel-body
+                                            h4.panel-title Send out a message
+                                            +checkBox(thisTarget + '.events.userSignedUp', glob, 'When a new user signs up to your portal')
+                                            +checkBox(thisTarget + '.events.userValidatedEmail', glob, 'When a user successfully validated his email address')
+                                            +checkBox(thisTarget + '.events.applicationAdded', glob, 'When an application has been created')
+                                            +checkBox(thisTarget + '.events.applicationDeleted', glob, 'When an application has been deleted')
+                                            +checkBox(thisTarget + '.events.subscriptionAdded', glob, 'When a new subscription to an API has been created')
+                                            +checkBox(thisTarget + '.events.subscriptionDeleted', glob, 'When a subscription has been cancelled')
+                                            +checkBox(thisTarget + '.events.approvalRequired', glob, 'When new subscription approval requests have been filed')
+                                            +checkBox(thisTarget + '.events.lostPasswordRequest', glob, 'When a user requests to reset his or her password')
+                                            +checkBox(thisTarget + '.events.verifyEmailRequest', glob, 'When a user wants to validate his or her email address')
+
+                                    br
+
             +renderButtons('/chatbot', '/email', '/templates')
