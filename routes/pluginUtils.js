@@ -189,6 +189,9 @@ pluginUtils.makePluginsArray = function (bodyPlugins) {
     if (bodyPlugins.cors && bodyPlugins.cors.useCors) {
         delete bodyPlugins.cors.useCors;
         bodyPlugins.cors.name = 'cors';
+        bodyPlugins.cors.config.methods = this.fixCorsArray(bodyPlugins.cors.config.methods)
+        bodyPlugins.cors.config.headers= this.fixCorsArray(bodyPlugins.cors.config.headers)
+        bodyPlugins.cors.config.exposed_headers =this.fixCorsArray(bodyPlugins.cors.config.exposed_headers)
         plugins.push(fixCors(bodyPlugins.cors));
     }
     if (bodyPlugins.file_log && bodyPlugins.file_log.useFileLog) {
@@ -214,5 +217,13 @@ pluginUtils.makePluginsArray = function (bodyPlugins) {
     }
     return plugins;
 };
+
+pluginUtils.fixCorsArray = (cors_prop_value) => {
+    if(cors_prop_value && !Array.isArray(cors_prop_value) && !cors_prop_value.includes('$')) {
+       return  cors_prop_value.split(',')
+    } else {
+        return cors_prop_value
+    }
+}
 
 module.exports = pluginUtils;
