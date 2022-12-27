@@ -150,6 +150,11 @@ Vue.component('wicked-api', {
 
 Vue.component('wicked-api-kong', {
     props: ['value', 'envPrefix'],
+    methods : {
+        refreshRoutes : function(routesData) {
+            this.$emit('checkit', routesData);
+        }
+    },
     template: `
     <wicked-panel :open=true title="Kong (Gateway) Configuration" type="primary">
         <wicked-input v-model="value.api.host" label="API Host:" hint="API Host, it could be alternate DNS for the service" :env-var="envPrefix + 'HOST'" />
@@ -162,7 +167,7 @@ Vue.component('wicked-api-kong', {
           <wicked-input v-model="value.api.read_timeout" number="true" label="Read timeout:" hint="The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. Defaults to <code>60000</code>" />
         </wicked-panel>
 
-        <wicked-routes v-model="value.api.routes"/>
+        <wicked-routes v-on:input="refreshRoutes" v-model="value.api"/>
     </wicked-panel>
 `
 });
@@ -199,7 +204,14 @@ Vue.component('wicked-api-swagger', {
 
 const vm = new Vue({
     el: '#vueBase',
-    data: injectedData
+    data: injectedData,
+    methods : {
+        refreshData : function(routesInfo) {
+           console.log('got latest api routes data')
+           //now refresh the routes information in plugin section
+           this.$refs.plugincomp.trig(routesInfo)
+        }
+    }
 });
 
 function isValidURL(uri) {
@@ -282,7 +294,36 @@ function validateData(callback) {
 
 function storeData() {
     const apiId = vm.api.id;
-
+    console.log('inside store data')
+    let service_plugins = vm.$refs.plugincomp.service_plugins.plugin_data
+    console.log('---------plugin data service--')
+    console.log(JSON.stringify(service_plugins))
+    if(service_plugins && service_plugins.length > 0) {
+    vm.$data.config.plugins = service_plugins
+    }
+    let route_plugins_data = vm.$refs.plugincomp.mock_routes
+    let config_routes = vm.$data.config.api.routes
+    if(vm.$data.config.api.enable_routes) {
+        for(let key in route_plugins_data) {
+            console.log('------------------')
+            console.log(key)
+            console.log('-------------------')
+            for(let j=0;j<config_routes.length;j++) {
+                let route_elem = config_routes[j]
+                if(key == route_elem.name) {
+                    config_routes[j].plugins = route_plugins_data[key].plugin_data
+                }
+            }
+        }
+    }
+    if(!vm.$data.config.api.enable_routes) {
+        for(let j=0;j<config_routes.length;j++) {
+            delete config_routes[j].plugins     
+        }
+    }
+    vm.$data.config.api.routes = config_routes
+    console.log('pushed data---')
+    console.log(JSON.stringify(vm.$data.config))
     validateData( function(data, error) {
         if( error ) {
           alert('Error validating data:\n' + error);

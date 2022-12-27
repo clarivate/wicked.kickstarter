@@ -10,6 +10,8 @@ const pluginUtils = require('./pluginUtils');
 
 router.get('/', function (req, res, next) {
     const apis = utils.loadApis(req.app);
+    debug('here...')
+    debug(req.app)
     res.render('apis',
         {
             configPath: req.app.get('config_path'),
@@ -177,7 +179,14 @@ router.get('/:apiId', function (req, res, next) {
     const groups = utils.loadGroups(req.app);
     const plans = utils.loadPlans(req.app);
     const pools = utils.loadPools(req.app);
-
+    debug('inside api new...')
+    debug(thisApi)
+    debug('printing config')
+    debug(config.api)
+    if(!config.api.hasOwnProperty('enable_routes')) {
+        config.api.enable_routes = false
+    }
+    debug('rendering the api settings page')
     res.render('apisettings', {
         configPath: req.app.get('config_path'),
         safeApiId: safeApiId,
@@ -207,7 +216,9 @@ router.post('/:apiId/api', function (req, res, next) {
     const plugins = pluginUtils.makePluginsArray(body.plugins);
     const config = body.config;
     //config.api.uris = config.api.uris.filter(u => !!u);
-
+    debug('here in post..')
+    debug(config)
+    debug(config.api.routes.enable_routes)
     config.api.routes.forEach( r => {
        r.uris = r.uris ? r.uris.filter(u => !!u) : r.uris;
        r.protocols = r.protocols ? r.protocols.filter(u => !!u) : r.protocols;
@@ -217,7 +228,7 @@ router.post('/:apiId/api', function (req, res, next) {
 
     const kongConfig = {
         api: config.api,
-        plugins: plugins
+        plugins: config.plugins
     };
     utils.saveApiConfig(req.app, apiId, kongConfig);
     utils.saveApiDesc(req.app, apiId, body.desc);

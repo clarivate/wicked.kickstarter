@@ -332,6 +332,7 @@ Vue.component('wicked-input', {
                           :value="value"
                           :style="'height:' + textareaHeight"
                           v-on:input="verifyValue($event.target.value)"
+                          v-on:
                 >{{ value }}</textarea>
                 <p v-if="isJson && !isValidInput"><span style="color:red; font-weight:bold;">ERROR:</span> Content is not valid JSON.</p>
                 <div v-if="!isJson">
@@ -416,11 +417,13 @@ Vue.component('wicked-string-array', {
 });
 
 Vue.component('wicked-routes', {
-    props: ['value', 'width'],
+    props: ['value', 'width','route_plugin_enabled'],
     data: function () {
+        console.log(this.value)
         return {
             internalId: randomId(),
-            values: this.value
+            values: this.value.routes,
+            enable_route_name: this.value.enable_routes
         };
     },
     methods: {
@@ -433,8 +436,13 @@ Vue.component('wicked-routes', {
                protocols: [],
                methods: []
             });
-
-            this.$emit('input', this.values);
+            if(this.enable_route_name) {
+                this.addRouteNames()
+            } else {
+                this.removeRouteNames()
+            }
+            this.value.routes=this.values
+            this.$emit('input', this.value);
         },
         deleteRoute: function (index) {
             if (this.values.length <= 1) {
@@ -442,16 +450,44 @@ Vue.component('wicked-routes', {
                 return;
             }
             this.values.splice(index, 1);
-            this.$emit('input', this.values);
+            this.value.routes=this.values
+            this.$emit('input', this.value);
+        },
+        routePluginEnabled: function(val) {
+           if(val) {
+            this.enable_route_name=true
+            this.addRouteNames()
+           } else {
+            this.enable_route_name=false
+            this.removeRouteNames()
+           }
+           return
+        },
+
+        addRouteNames : function() {
+            for(let i=0;i<this.values.length; ++i) {
+                let route_element = this.values[i]
+                route_element.name = this.value.name + '-route-' + i
+            }
+            this.$emit('input', this.value);
+        },
+        removeRouteNames : function() {
+            for(let i=0;i<this.values.length; ++i) {
+                let route_element = this.values[i]
+                route_element.name = null
+            }
+            this.$emit('input', this.value);
         }
     },
     template: `
         <wicked-panel title="API Routes" type="default" :collapsible=false :open=true>
+        <wicked-checkbox v-model="value.enable_routes" v-on:input="routePluginEnabled" label="<b>Enable Route Plugins</b>. Check this box if you want to enable route level plugins." />
             <div v-for="(route, index) in values">
                 <div class="panel panel-default">
                     <button v-if="index > 0" v-on:click="deleteRoute(index)" :id="internalId + '.' + index" class="btn btn-danger pull-right" type="button"><span class="glyphicon glyphicon-remove"></span></button>
 
                     <div class="panel-body">
+                        <wicked-input v-model="route.name" v-if="enable_route_name" label="Route Name:"/>
                         <wicked-string-array v-model="route.paths" :allow-empty=false label="Paths:" hint="A list of paths that match this Route. For example: <code>/my-path</code>. At least one of <code>hosts</code>, <code>paths</code> or <code>methods</code> must be set." />
                         <wicked-checkbox v-model="route.strip_path" label="<b>Strip Uri</b>. Check this box if you don't want to pass the uri to the backend URL as well. Normally you wouldn't want that." />
                         <wicked-checkbox v-model="route.preserve_host" label="<b>Preserve Host</b>. Preserves the original <code>Host</code> header sent by the client, instead of replacing it with the hostname of the <code>upstream_url</code>." />
@@ -471,18 +507,109 @@ Vue.component('wicked-routes', {
 });
 
 Vue.component('wicked-plugins', {
-    props: ['value', 'hint', 'envPrefix', 'disableAwsLambda', 'disableCors'],
+    props: ['value', 'hint', 'envPrefix', 'disableAwsLambda', 'disableCors','config'],
     data: function () {
+        console.log('bootstrap config data..')
+        console.log(JSON.stringify(this.config))
+        let wicked_plugins =
+        {
+            'rate-limiting': false,
+            'cors': false,
+            'jwt': false,
+            'key-auth': false,
+            'aws-lambda': false,
+            'url-replace': false,
+            'eureka-router': false
+        }
+
+
         const disableAwsLambda = typeof this.disableAwsLambda !== 'undefined';
         const disableCors = typeof this.disableCors !== 'undefined';
+        
+        let service_plugins_data = {plugin_data : [] ,active_plugins : JSON.parse(JSON.stringify(wicked_plugins))}
+        let activate_routes_section = false
+        let routes_panel_data = {}
+        for(let j=0;j<this.config.api.routes.length; j++ ) {
+            console.log('inside routes loop')
+            console.log(this.config.api.routes)
+            let route_elem = this.config.api.routes[j]
+            console.log(JSON.stringify(route_elem))
+            //if route element has plugins then filter out the present state in GUI
+            let route_plugins = route_elem.plugins
+            console.log(JSON.stringify(route_plugins))
+            if(route_plugins && route_plugins.length > 0) {
+                routes_panel_data[route_elem.name] = {plugin_data:[],active_plugins : JSON.parse(JSON.stringify(wicked_plugins))}
+                activate_routes_section = true
+                //we have the plugins,Check if the rate limiting is active on the route
+                for(let i=0;i<route_plugins.length;i++) {
+                        let plugin_conf = route_plugins[i]
+                        routes_panel_data[route_elem.name].plugin_data.push(plugin_conf)
+                        routes_panel_data[route_elem.name].active_plugins[plugin_conf.name]=true    
+                }
+            }
+        }
+        //similarly get the service plugins...
+        for(let j=0;j<this.config.plugins.length; j++ ) { 
+               
+               let plugin_obj = this.config.plugins[j]
+               console.log(JSON.stringify(plugin_obj))
+               service_plugins_data.active_plugins[plugin_obj.name] = true
+               service_plugins_data.plugin_data.push(this.config.plugins[j])
+        }
+
         return {
             username: '',
             password: '',
             hideAwsLambda: disableAwsLambda,
-            hideCors: disableCors
+            hideCors: disableCors,
+            service_plugins : service_plugins_data,
+            routes_checkbox : activate_routes_section,
+            mock_routes :routes_panel_data,
+            wicked_plugins:wicked_plugins,
+            apiName : this.config.api.name
         };
     },
     methods: {
+        trig : function(routesInfo) {
+            console.log('inside trig')
+            console.log(JSON.stringify(routesInfo))
+            this.routes_checkbox = routesInfo.enable_routes
+            console.log('value recieved after delete is---'+this.routes_checkbox)
+            if(!this.routes_checkbox) {
+                console.log('inside delete')
+                this.mock_routes ={}
+                this.$forceUpdate();
+                return
+            } else {
+                   for(let z=0;z<routesInfo.routes.length;++z) {
+                       let route_elem = routesInfo.routes[z];
+                       if(!this.mock_routes[route_elem.name]) 
+                       { 
+                        this.mock_routes[route_elem.name] = {plugin_data:[],active_plugins : JSON.parse(JSON.stringify(this.wicked_plugins))}
+                       }
+
+                }
+            }
+            //delete the routes which are no longer existings..
+
+            let array_elem = JSON.parse(JSON.stringify(this.mock_routes))
+            for(let key in array_elem) {
+                let found = false
+               for(let m=0;m<routesInfo.routes.length;++m) {
+                  let r_elem = routesInfo.routes[m]
+                  if(r_elem.name==key) {
+                    found=true
+                  }
+               }
+               if(!found) {
+                delete this.mock_routes[key]
+               }
+
+            }
+            console.log(JSON.stringify(this.mock_routes))
+           
+            this.$forceUpdate();
+        },
         getPanelType: function (enabled) {
             return enabled ? 'success' : 'info';
         },
@@ -548,63 +675,86 @@ Vue.component('wicked-plugins', {
             } catch (err) {
                 alert('An error occurred. Possibly your browser does not support "btoa". The exception: ' + err.message);
             }
+        },
+        updateRouteNames : function(data) {
+            alert('change event captured..'+data.target.value)
+        },
+        deleteRoutePlugin : function(route_name,index_value) {
+            let route_data = this.mock_routes[route_name]
+            route_data.splice(index_value, 1);
+            if(route_data.length == 0) {
+                delete this.mock_routes[route_name]
+            } else  {
+            this.mock_routes[route_name] = route_data
+            }
+        },
+
+        deleteRouteName : function(route_name) {
+            delete this.mock_routes[route_name]
+        },
+        updateRouteData : function(plugin_name,route_name,event) {
+        if(event.target.checked) {
+           this.mock_routes[route_name].active_plugins[plugin_name] = true
+           this.mock_routes[route_name].plugin_data.push({
+            name:plugin_name,
+            config:{}
+           })
+        } else {
+            this.mock_routes[route_name].active_plugins[plugin_name] = false
+            for(let i=0;i< this.mock_routes[route_name].plugin_data.length ; ++i) {
+                let data = this.mock_routes[route_name].plugin_data[i]
+                if(plugin_name==data.name) {
+                    this.mock_routes[route_name].plugin_data.splice(i, 1);
+                }
+            }
         }
+        this.$forceUpdate();
+       },
+       updateServiceData : function(plugin_name,event) {
+       
+        //let service_plugins_data = {plugin_data : {} ,active_plugins : wicked_plugins}
+        if(event.target.checked) {
+            
+           this.service_plugins.active_plugins[plugin_name] = true
+           this.service_plugins.plugin_data.push({
+            name:plugin_name,
+            config:{}
+           })
+
+        } else {
+            this.service_plugins.active_plugins[plugin_name] = false
+            for(let i=0;i< this.service_plugins.plugin_data.length ; ++i) {
+                let data = this.service_plugins.plugin_data[i]
+                if(plugin_name==data.name) {
+                    this.service_plugins.plugin_data.splice(i, 1);
+                }
+            }
+        }
+        this.$forceUpdate();
+       },
+       updatePluginValue : function(event,plugin_name,route_name) {
+          console.log('route_name is---'+route_name)
+          console.log('plugin name is --'+plugin_name)
+          let event_data = JSON.parse(event.target.value)
+          let p_data = this.mock_routes[route_name].plugin_data
+          console.log(JSON.stringify(p_data))
+          for(let i=0;i<p_data.length;++i) {
+            console.log('name is--'+p_data[i].name)
+            if(plugin_name==p_data[i].name){
+                console.log('match')
+                p_data[i] = {name:plugin_name,config:event_data.config} 
+                
+            }
+          }
+          this.mock_routes[route_name].plugin_data = p_data
+          console.log(JSON.stringify(this.mock_routes))
+         
+       }
     },
     template: `
-        <wicked-panel title="Plugin Configuration" type="primary" :open=true>
+        <wicked-panel title="Plugin Configurations" type="primary" :open=true>
             <p>{{ hint }}</p>
-            <wicked-panel title="Rate Limiting" :type="getPanelType(value.rate_limiting.useRateLimiting)">
-                <p>One of these fields must be filled (we won't check, but it will fail when deploying).
-                Prefer shorter periods over longer periods in case you might need to redeploy/re-init
-                the Kong database. That would result in reset rate limiting periods.
-                <strong>Recommendation:</strong> Stick to hours or smaller.</p>
-                <wicked-checkbox v-model="value.rate_limiting.useRateLimiting" label="<strong>Use Rate Limiting Plugin</strong>" />
-                <wicked-input v-model="value.rate_limiting.config.second" label="Requests per second:" />
-                <wicked-input v-model="value.rate_limiting.config.minute" label="Requests per minute:" />
-                <wicked-input v-model="value.rate_limiting.config.hour" label="Requests per hour:" />
-                <wicked-input v-model="value.rate_limiting.config.day" label="Requests per day:" />
-                <wicked-input v-model="value.rate_limiting.config.year" label="Requests per year:" />
-                <hr>
-                <h4>Additional Settings</h4>
-                <wicked-checkbox v-model="value.rate_limiting.config.fault_tolerant" label="<strong>Fault tolerant:</strong> Proxy requests even if Kong cannot reach its DB." />
-            </wicked-panel>
-            <wicked-panel title="Correlation ID" :type="getPanelType(value.correlation_id.useCorrelationId)">
-                <p>Use the Correlation ID plugin to introduce a correlation ID by the API Gateway; this can be
-                useful when tracking and debugging requests to your backend, to see which request passes through
-                which systems at which time. This is a highly recommended plugin.</p>
-                <wicked-checkbox v-model="value.correlation_id.useCorrelationId" label="Use the correlation ID plugin" />
-                <wicked-input v-model="value.correlation_id.config.header_name" label="Header Name" hint="The name of the header to pass the ID in." :env-var="envPrefix + 'CORR_HEADER'" />
-                <label>Correlation ID Generator:</label>
-                <select v-model="value.correlation_id.config.generator" class="form-control">
-                    <option>uuid#counter</option>
-                    <option>uuid</option>
-                </select>
-                <wicked-checkbox v-model="value.correlation_id.config.echo_downstream" label="<strong>Echo ID downstream</strong>: Check to echo the correlation ID back to the calling client." />
-            </wicked-panel>
-            <wicked-panel v-if="!hideCors" title="CORS" :type="getPanelType(value.cors.useCors)">
-                <p>Use the CORS plugin to enable Cross Origin Request Sharing on your API. If you don't use
-                CORS, you will not be able to call your API from a browser. Which may be exactly what you do
-                not want. For machine to machine communication, enabling this is <strong>not required</strong>
-                and definitely <strong>not recommended</strong>.</p>
-                <wicked-checkbox v-model="value.cors.useCors" label="<strong>Use the CORS plugin</strong>" />
-
-                <label>Access-Control-Allow-Origin:</label>
-                <wicked-string-array v-model="value.cors.config.origins" :allow-empty=false />
-                <wicked-input v-model="value.cors.config.methods" label="Access-Control-Allow-Methods" hint="Value for the <code>Access-Control-Allow-Methods</code> header, expects a comma delimited string (e.g. GET,POST). Defaults to GET,HEAD,PUT,PATCH,POST,DELETE." :env-var="envPrefix + 'CORS_METHODS'" />
-                <wicked-input v-model="value.cors.config.headers" label="Access-Control-Allow-Headers" hint="Value for the <code>Access-Control-Allow-Headers</code> header, expects a comma delimited string (e.g. <code>Origin,Authorization</code>). Defaults to the value of the <code>Access-Control-Request-Headers</code> header." :env-var="envPrefix + 'CORS_HEADERS'" />
-                <wicked-input v-model="value.cors.config.exposed_headers" label="Access-Control-Expose-Headers" hint="Value for the <code>Access-Control-Expose-Headers</code> header, expects a comma delimited string (e.g. <code>Origin,Authorization</code>). If not specified, no custom headers are exposed." :env-var="envPrefix + 'CORS_EXPOSE_HEADERS'" />
-                <wicked-checkbox v-model="value.cors.config.credentials" label="<strong>Access-Control-Allow-Credentials</strong>: Flag to determine whether the Access-Control-Allow-Credentials header should be sent with true as the value. Defaults to false." />
-                <wicked-input v-model="value.cors.config.max_age" label="Preflight Max Age (seconds):" hint="Indicates how long the results of the preflight request can be cached, in seconds." />
-                <wicked-checkbox v-model="value.cors.config.preflight_continue" label="<strong>Proxy OPTIONS to backend</strong>: A boolean value that instructs the plugin to proxy the <code>OPTIONS</code> preflight request to the upstream API. Defaults to <code>false</code>." />
-            </wicked-panel>
-            <wicked-panel v-if="!hideAwsLambda" title="AWS Lambda" :type="getPanelType(value.aws_lambda.useAwsLambda)">
-                <p>All of these fields must be filled (we won't check, but it will fail when deploying).</p>
-                <wicked-input v-model="value.aws_lambda.config.aws_key" label="AWS Key:" :env-var="envPrefix + 'AWS_KEY'" />
-                <wicked-input v-model="value.aws_lambda.config.aws_secret" label="AWS Secret:" :env-var="envPrefix + 'AWS_SECRET'" />
-                <wicked-input v-model="value.aws_lambda.config.aws_region" label="AWS Region:" :env-var="envPrefix + 'AWS_REGION'" />
-                <wicked-input v-model="value.aws_lambda.config.function_name" label="Function name:" :env-var="envPrefix + 'AWS_FUNCTION'" />
-            </wicked-panel>
-            <wicked-panel title="Other plugins" :type="getPanelType(value.others.useOthers)">
+            <wicked-panel title="Service plugins" :type="getPanelType(value.others.useOthers)">
                 <p>This wicked Kickstarter application only has direct support for a few of Kong's plugins.
                 You can, by editing the following JSON snippet, configure all other plugins according to
                 the <a href='https://getkong.org/plugins/' target='_blank'>plugin documentation at Mashape</a>.
@@ -638,10 +788,47 @@ Vue.component('wicked-plugins', {
                     </table></p>
                     <p><button v-on:click="addBasicAuth" class="btn btn-success btm-sm">Add Authentication Header</button></p>
                 </wicked-panel>
-                <wicked-checkbox v-model="value.others.useOthers" label="<strong>Use other plugins</strong>" />
-                <wicked-input v-model="value.others.config" :textarea=true :json=true label="Plugin configuration (plugin array):" height="400px" />
+                
+                <wicked-panel :title=apiName :type="getPanelType(false)">
+                <div v-for="(value, name,index) in service_plugins.active_plugins" style="display: inline-block;text-align:center;">
+                <input type='checkbox' :name=name :value=name @change="updateServiceData(name,$event)" :checked=value style="margin: 0px 0px 0px 0px;"><label style="margin: 0px 20px 0px 3px;">{{name}}</label>
+                </div>
+                <div v-for="(value,index) in service_plugins.plugin_data">
+                <wicked-panel :title=value.name :type="getPanelType(false)">
+                   
+                 
+                <textarea class="form-control" :value=JSON.stringify(value,null,4) style="height:200px" >{{ value }}</textarea>  
+                 </wicked-panel>
+                </div>
 
-            </wicked-panel>
+                </wicked-panel>
+                </wicked-panel>
+
+            <wicked-panel title="Route plugins" :type="getPanelType(routes_checkbox)" v-if="routes_checkbox">
+            <div v-for="(value,route_name,index) in mock_routes">
+              <wicked-panel :title=route_name :type="getPanelType(routes_checkbox)">
+             
+              
+             
+              <div v-for="(value, name,index) in value.active_plugins" style="display: inline-block;text-align:center;">
+              <input type='checkbox' :name=name :value=name @change="updateRouteData(name,route_name,$event)" :checked=value style="margin: 0px 0px 0px 0px;"><label style="margin: 0px 20px 0px 3px;">{{name}}</label>
+              </div>
+            
+             
+             
+              <div id="app">
+                <div v-for="(value1, index1) in value.plugin_data">
+                  <wicked-panel :title=value1.name :type="getPanelType(routes_checkbox)">
+                   
+                 
+                    <textarea class="form-control" :value=JSON.stringify(value1,null,4) style="height:200px" @change="updatePluginValue($event,value1.name,route_name)">{{ value }}</textarea>  
+                     </wicked-panel>
+                </div>
+                </div>
+              </wicked-panel>
+            </div>
+          </wicked-panel>
+         
         </wicked-panel>
     `
 });

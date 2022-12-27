@@ -229,6 +229,8 @@ function getBaseDir(app) {
 }
 
 function getConfigDir(app) {
+    debug('inside config directory')
+    debug(app.get('config_path'))
     return app.get('config_path');
 }
 

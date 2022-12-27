@@ -12,6 +12,7 @@ if [ -z "$DOCKER_TAG" ]; then
     export DOCKER_TAG=dev
 fi
 
+
 if [[ "haufelexware/wicked." == "$DOCKER_PREFIX" ]] && [[ "$1" == "--push" ]]; then
     echo "INFO: Resolving env base tag for target tag ${DOCKER_TAG}..."
     docker pull haufelexware/wicked.env:next-onbuild-alpine
@@ -33,6 +34,7 @@ echo "============================================"
 export BUILD_ALPINE=""
 perl -pe 's;(\\*)(\$([a-zA-Z_][a-zA-Z_0-9]*)|\$\{([a-zA-Z_][a-zA-Z_0-9]*)\})?;substr($1,0,int(length($1)/2)).($2&&length($1)%2?$2:$ENV{$3||$4});eg' Dockerfile.template > Dockerfile
 normalImageName="${DOCKER_PREFIX}kickstarter:${DOCKER_TAG}"
+echo $normalImageName
 if [ "${DOCKER_TAG}" = "dev" ]; then
     docker build -t ${normalImageName} .
 else

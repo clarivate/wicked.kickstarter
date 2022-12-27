@@ -18,8 +18,8 @@ block content
         div(id='vueBase')
             -var envPrefix = 'PORTAL_APIS_' + safeApiId.toUpperCase() + '_'
             wicked-api(v-model="api" v-bind:auth-methods="authMethods" v-bind:groups="groups" v-bind:plans="plans" v-bind:pools="pools" env-prefix="#{envPrefix}")
-            wicked-api-kong(v-model="config" env-prefix="#{envPrefix}")
-            wicked-plugins(v-model="plugins" env-prefix="#{envPrefix}PLUGINS_")
+            wicked-api-kong(v-model="config" @checkit="refreshData" env-prefix="#{envPrefix}")
+            wicked-plugins(v-model="plugins" v-bind:config="config" ref='plugincomp' env-prefix="#{envPrefix}PLUGINS_")
             wicked-api-desc(v-model="desc" env-prefix="#{envPrefix}")
             //- wicked-input(v-model="desc" textarea=true env-var="WOOHA")
             //- wicked-markdown(v-model="desc")
