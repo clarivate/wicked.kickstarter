@@ -200,7 +200,7 @@ router.post('/:apiId/api', function (req, res, next) {
     const apiId = req.params.apiId;
     const apis = utils.loadApis(req.app);
     body.api.tags = body.api.tags ? body.api.tags.filter(t => !!t) : [];
-    body.api.keyRotationEnabled = body.api.keyRotationEnabled || false;
+    
     // Check if keyRotationEnabled is false, then delete keyRotationEnabled
     if (!body.api.keyRotationEnabled) {
         delete body.api.keyRotationEnabled;
